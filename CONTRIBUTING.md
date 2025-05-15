@@ -1,6 +1,3 @@
-### ✅ 2. Contributing Guide (`CONTRIBUTING.md`)
-
-````md
 # Contributing to Sendexa SMPP Server
 
 We welcome contributions from developers around the world.
