@@ -1,5 +1,4 @@
 import { Queue } from 'bullmq';
-import { logger } from '../../utils/logger';
 import { redisConfig } from '../../configs/system';
 
 export const queue = new Queue('sms-messages', {

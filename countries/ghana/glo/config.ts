@@ -1,6 +1,6 @@
 export const GloConfig = {
-  systemId: 'glo_smpp_user',
-  password: 'glo_secure_pass',
+  systemId: process.env.GLO_SMPP_SYSTEM_ID || 'glo_smpp_user',
+  password: process.env.GLO_SMPP_PASSWORD || 'glo_secure_pass',
   host: 'glo-smpp-gw.glo.com.gh',
   port: 5016,
   systemType: 'SMPP',

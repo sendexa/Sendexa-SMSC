@@ -1,4 +1,4 @@
-import { logger } from '../../utils/logger';
+import { logger } from '../utils/logger';
 
 const blockedWords = [
   'fraud', 'scam', '419', 'free money', 'win prize',
@@ -29,7 +29,11 @@ export async function contentFilter(content: string): Promise<{ allowed: boolean
 
     return { allowed: true };
   } catch (error) {
-    logger.error(`Content filter error: ${error.message}`);
+    if (error instanceof Error) {
+      logger.error(`Content filter error: ${error.message}`);
+    } else {
+      logger.error('Content filter error: Unknown error');
+    }
     return {
       allowed: false,
       reason: 'Error processing message content'

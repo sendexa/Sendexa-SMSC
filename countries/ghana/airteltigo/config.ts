@@ -1,6 +1,6 @@
 export const AirtelTigoConfig = {
-  systemId: 'airteltigo_smpp_user',
-  password: 'airteltigo_secure_pass',
+  systemId: process.env.AIRTELTIGO_SMPP_SYSTEM_ID || 'airteltigo_smpp_user',
+  password: process.env.AIRTELTIGO_SMPP_PASSWORD || 'airteltigo_secure_pass',
   host: 'airteltigo-smpp-gw.airteltigo.com.gh',
   port: 5016,
   systemType: 'SMPP',

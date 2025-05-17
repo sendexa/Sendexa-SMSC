@@ -1,6 +1,6 @@
 export const VodafoneConfig = {
-  systemId: 'vodafone_smpp_user',
-  password: 'vodafone_secure_pass',
+  systemId: process.env.VODAFONE_SMPP_SYSTEM_ID || 'vodafone_smpp_user',
+  password: process.env.VODAFONE_SMPP_PASSWORD || 'vodafone_secure_pass',
   host: 'vodafone-smpp-gw.vodafone.com.gh',
   port: 5016,
   systemType: 'smpp',

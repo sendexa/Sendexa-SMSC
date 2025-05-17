@@ -2,5 +2,5 @@
   "watch": ["."],
   "ext": "ts",
   "ignore": ["dist"],
-  "exec": "ts-node smpp-core/smpp-server.ts"
+  "exec": "ts-node app.ts"
 }

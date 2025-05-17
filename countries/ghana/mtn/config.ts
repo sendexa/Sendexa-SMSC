@@ -1,6 +1,6 @@
 export const MTNConfig = {
-  systemId: 'mtn_smpp_user',
-  password: 'secure_password_123',
+  systemId: process.env.MTN_SMPP_SYSTEM_ID || 'mtn_smpp_user',
+  password: process.env.MTN_SMPP_PASSWORD || 'secure_password_123',
   host: 'mtn-smpp-gw.mtn.com.gh',
   port: 5016,
   systemType: 'smpp',

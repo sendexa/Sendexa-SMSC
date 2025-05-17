@@ -1,25 +1,25 @@
 import { Worker } from 'bullmq';
 import { logger } from '../../utils/logger';
 import { redisConfig } from '../../configs/system';
-import { MTNConfig } from '../../countries/ghana/mtn/config';
-import { VodafoneConfig } from '../../countries/ghana/vodafone/config';
-import { AirtelTigoConfig } from '../../countries/ghana/airteltigo/config';
-import { GloConfig } from '../../countries/ghana/glo/config';
 
 export function createWorkers(): void {
   const worker = new Worker('sms-messages', async job => {
     try {
-      const { telco, from, to, content } = job.data;
-      
-      logger.info(`Processing message to ${to} via ${telco}`);
+      const { telco } = job.data;
+
+      logger.info(`Processing message via ${telco}`);
       
       // In a real implementation, this would connect to the actual telco SMPP server
       // For now, we'll just simulate success
-      await simulateSMPPSubmission(telco, from, to, content);
+      await simulateSMPPSubmission(telco);
       
       return { status: 'delivered' };
     } catch (error) {
-      logger.error(`Message processing failed: ${error.message}`);
+      let errorMsg = 'Unknown error';
+      if (typeof error === 'object' && error && 'message' in error) {
+        errorMsg = (error as { message: string }).message;
+      }
+      logger.error(`Message processing failed: ${errorMsg}`);
       throw error;
     }
   }, {
@@ -36,7 +36,7 @@ export function createWorkers(): void {
   });
 }
 
-async function simulateSMPPSubmission(telco: string, from: string, to: string, content: string): Promise<void> {
+async function simulateSMPPSubmission(telco: string): Promise<void> {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 100));
   

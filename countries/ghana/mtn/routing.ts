@@ -1,7 +1,7 @@
 import { MTNConfig } from './config';
 
 export class MTNRouting {
-  static getRouteConfig(msisdn: string, messageType: string = 'standard') {
+  static getRouteConfig(msisdn: string) {
     // MTN has different routes for different message types
     const routes = {
       standard: {
@@ -37,7 +37,7 @@ export class MTNRouting {
   }
 
   static shouldRouteToMTN(msisdn: string): boolean {
-    const mtnPrefixes = ['24', '25', '26', '27', '28', '29', '54', '55', '56', '57', '58', '59'];
+    const mtnPrefixes = ['24', '25', '54', '55', '56', '57', '58', '59'];
     const prefix = msisdn.startsWith('233') ? msisdn.substring(3, 5) : msisdn.substring(0, 2);
     return mtnPrefixes.includes(prefix);
   }

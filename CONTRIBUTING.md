@@ -6,7 +6,7 @@ We welcome contributions from developers around the world.
 1. Fork the repository
 2. Clone it locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/sendexa-smpp.git
+   git clone https://github.com/sendexa/sendexa-smpp.git
    cd sendexa-smpp
    npm install
    npm run dev

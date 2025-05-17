@@ -1,7 +1,7 @@
 import { logger } from '../../../utils/logger';
 
 export class AirtelTigoDlrHandler {
-  static parse(dlrData: any): any {
+  static parse(dlrData: Record<string, unknown>): Record<string, unknown> {
     try {
       // AirtelTigo specific DLR format
       const statusMap: Record<string, string> = {
@@ -12,7 +12,7 @@ export class AirtelTigoDlrHandler {
         'REJECTD': 'REJECTED'
       };
 
-      const status = statusMap[dlrData.status] || 'UNKNOWN';
+      const status = statusMap[dlrData.status as string] || 'UNKNOWN';
       const timestamp = dlrData.done_date || new Date().toISOString();
 
       return {
@@ -33,12 +33,16 @@ export class AirtelTigoDlrHandler {
         }
       };
     } catch (error) {
-      logger.error(`AirtelTigo DLR parsing error: ${error.message}`);
-      return null;
+      if (typeof error === 'object' && error && 'message' in error) {
+        logger.error(`AirtelTigo DLR parsing error: ${(error as { message: string }).message}`);
+      } else {
+        logger.error('AirtelTigo DLR parsing error: Unknown error');
+      }
+      return {};
     }
   }
 
-  static formatForStorage(dlrData: any): any {
+  static formatForStorage(dlrData: Record<string, unknown>): Record<string, unknown> {
     return {
       ...this.parse(dlrData),
       _telco: 'airteltigo',

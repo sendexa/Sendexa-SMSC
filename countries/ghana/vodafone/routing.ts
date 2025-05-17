@@ -1,7 +1,7 @@
 import { VodafoneConfig } from './config';
 
 export class VodafoneRouting {
-  static getRouteConfig(msisdn: string) {
+  static getRouteConfig() {
     // Vodafone has a simpler routing structure
     return {
       host: VodafoneConfig.host,

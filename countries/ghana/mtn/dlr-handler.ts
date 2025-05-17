@@ -1,7 +1,7 @@
 import { logger } from '../../../utils/logger';
 
 export class MTNDlrHandler {
-  static parse(dlrData: any): any {
+  static parse(dlrData: Record<string, unknown>): Record<string, unknown> {
     try {
       // MTN specific DLR format
       const statusMap: Record<string, string> = {
@@ -12,8 +12,8 @@ export class MTNDlrHandler {
         '5': 'REJECTED'
       };
 
-      const status = statusMap[dlrData.status] || 'UNKNOWN';
-      const timestamp = dlrData.done_date || new Date().toISOString();
+      const status = statusMap[dlrData.status as string] || 'UNKNOWN';
+      const timestamp = dlrData.done_date as string || new Date().toISOString();
 
       return {
         messageId: dlrData.id,
@@ -32,12 +32,16 @@ export class MTNDlrHandler {
         }
       };
     } catch (error) {
-      logger.error(`MTN DLR parsing error: ${error.message}`);
-      return null;
+      if (typeof error === 'object' && error && 'message' in error) {
+        logger.error(`MTN DLR parsing error: ${(error as { message: string }).message}`);
+      } else {
+        logger.error('MTN DLR parsing error: Unknown error');
+      }
+      return {};
     }
   }
 
-  static formatForStorage(dlrData: any): any {
+  static formatForStorage(dlrData: Record<string, unknown>): Record<string, unknown> {
     return {
       ...this.parse(dlrData),
       _telco: 'mtn',

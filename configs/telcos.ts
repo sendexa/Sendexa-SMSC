@@ -7,9 +7,9 @@ export const TelcoRegistry = {
   // Mapping of number prefixes to telco configs
   numberPrefixes: {
     mtn: ['24', '25', '26', '27', '28', '29', '54', '55', '56', '57', '58', '59'],
-    vodafone: ['20', '30', '50'],
+    vodafone: ['20',  '50'],
     airteltigo: ['23', '53', '52', '57'],
-    glo: ['23', '53', '52', '57'] // Note: Glo may share prefixes with AirtelTigo
+    glo: ['23', '53', '52', '57', '30'] // Note: Glo may share prefixes with AirtelTigo
   },
 
   // Get config by telco name

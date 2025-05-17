@@ -1,7 +1,7 @@
 import { logger } from '../../../utils/logger';
 
 export class VodafoneDlrHandler {
-  static parse(dlrData: any): any {
+  static parse(dlrData: Record<string, unknown>): Record<string, unknown> {
     try {
       // Vodafone specific DLR format
       const statusMap: Record<string, string> = {
@@ -12,8 +12,8 @@ export class VodafoneDlrHandler {
         '4': 'REJECTED'
       };
 
-      const status = statusMap[dlrData.stat] || 'UNKNOWN';
-      const timestamp = dlrData.done_date || new Date().toISOString();
+      const status = statusMap[dlrData.stat as string] || 'UNKNOWN';
+      const timestamp = dlrData.done_date as string || new Date().toISOString();
 
       return {
         messageId: dlrData.msgid,
@@ -32,12 +32,16 @@ export class VodafoneDlrHandler {
         }
       };
     } catch (error) {
-      logger.error(`Vodafone DLR parsing error: ${error.message}`);
-      return null;
+      if (typeof error === 'object' && error && 'message' in error) {
+        logger.error(`Vodafone DLR parsing error: ${(error as { message: string }).message}`);
+      } else {
+        logger.error('Vodafone DLR parsing error: Unknown error');
+      }
+      return {};
     }
   }
 
-  static formatForStorage(dlrData: any): any {
+  static formatForStorage(dlrData: Record<string, unknown>): Record<string, unknown> {
     return {
       ...this.parse(dlrData),
       _telco: 'vodafone',

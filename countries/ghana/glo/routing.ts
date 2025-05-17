@@ -1,7 +1,7 @@
 import { GloConfig } from './config';
 
 export class GloRouting {
-  static getRouteConfig(msisdn: string) {
+  static getRouteConfig() {
     // Glo has a single route for all messages
     return {
       host: GloConfig.host,

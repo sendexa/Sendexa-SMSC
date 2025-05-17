@@ -1,12 +1,13 @@
 import { Socket } from 'net';
-import { PDUProcessor } from './protocol-engine';
+import { EventEmitter } from 'events';
+import { PDUProcessor, DecodedPDU } from './protocol-engine';
 import { logger } from '../utils/logger';
 import { MTNConfig } from '../countries/ghana/mtn/config';
 import { VodafoneConfig } from '../countries/ghana/vodafone/config';
 import { AirtelTigoConfig } from '../countries/ghana/airteltigo/config';
 import { GloConfig } from '../countries/ghana/glo/config';
 
-export class SessionHandler {
+export class SessionHandler extends EventEmitter {
   private socket: Socket;
   private pduProcessor: PDUProcessor;
   private systemId: string = '';
@@ -15,6 +16,7 @@ export class SessionHandler {
   private telco: string = '';
 
   constructor(socket: Socket, pduProcessor: PDUProcessor) {
+    super();
     this.socket = socket;
     this.pduProcessor = pduProcessor;
     this.setupListeners();
@@ -26,13 +28,13 @@ export class SessionHandler {
         const pdu = this.pduProcessor.decode(data);
         this.handlePDU(pdu);
       } catch (error) {
-        logger.error(`Error processing PDU: ${error.message}`);
+        logger.error(`Error processing PDU: ${(error instanceof Error ? error.message : String(error))}`);
         this.socket.end();
       }
     });
   }
 
-  private async handlePDU(pdu: any): Promise<void> {
+  private async handlePDU(pdu: DecodedPDU): Promise<void> {
     switch (pdu.command) {
       case 'bind_transceiver':
         await this.handleBind(pdu);
@@ -52,7 +54,7 @@ export class SessionHandler {
     }
   }
 
-  private async handleBind(pdu: any): Promise<void> {
+  private async handleBind(pdu: DecodedPDU): Promise<void> {
     const { system_id, password } = pdu;
     
     // Validate credentials against telco configurations
@@ -88,7 +90,7 @@ export class SessionHandler {
     return false;
   }
 
-  private async handleSubmit(pdu: any): Promise<void> {
+  private async handleSubmit(pdu: DecodedPDU): Promise<void> {
     if (!this.bound) {
       this.sendResponse(pdu, 'submit_sm_resp', { command_status: 0x0000000E });
       return;
@@ -108,16 +110,16 @@ export class SessionHandler {
     });
   }
 
-  private async handleEnquireLink(pdu: any): Promise<void> {
+  private async handleEnquireLink(pdu: DecodedPDU): Promise<void> {
     this.sendResponse(pdu, 'enquire_link_resp');
   }
 
-  private async handleUnbind(pdu: any): Promise<void> {
+  private async handleUnbind(pdu: DecodedPDU): Promise<void> {
     this.sendResponse(pdu, 'unbind_resp');
     this.socket.end();
   }
 
-  private sendResponse(originalPdu: any, command: string, options: any = {}): void {
+  private sendResponse(originalPdu: DecodedPDU, command: string, options: Record<string, unknown> = {}): void {
     const response = this.pduProcessor.encode({
       command,
       sequence_number: originalPdu.sequence_number,
