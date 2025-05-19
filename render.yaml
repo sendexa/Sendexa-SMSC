@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sendexa-smpp
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: REDIS_URL
+        sync: false
+      - key: SMPP_HOST
+        sync: false
+      - key: SMPP_PORT
+        sync: false
+      - key: SMPP_SYSTEM_ID
+        sync: false
+      - key: SMPP_PASSWORD
+        sync: false 

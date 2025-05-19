@@ -8,8 +8,8 @@
     "lint:fix": "eslint . --ext .ts,.js --fix",
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/app.ts",
-    "prepare": "husky install",
+    "start": "node dist/app.js",
+    "prepare": "node -e \"try { require('husky').install() } catch (e) {if (e.code !== 'MODULE_NOT_FOUND') throw e}\"",
     "test": "ts-node test/api.test.ts"
   },
   "lint-staged": {
@@ -55,5 +55,8 @@
     "validator": "^13.15.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
