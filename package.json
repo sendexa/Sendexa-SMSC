@@ -9,7 +9,8 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/app.ts",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test": "ts-node test/api.test.ts"
   },
   "lint-staged": {
     "*.ts": "eslint --fix"
@@ -20,6 +21,7 @@
   "type": "commonjs",
   "devDependencies": {
     "@eslint/js": "^9.26.0",
+    "@types/axios": "^0.9.36",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.1",
     "@types/node": "^22.15.18",
@@ -39,6 +41,7 @@
   },
   "dependencies": {
     "@types/helmet": "^0.0.48",
+    "axios": "^1.9.0",
     "bullmq": "^5.52.2",
     "dayjs": "^1.11.13",
     "dotenv": "^16.5.0",
