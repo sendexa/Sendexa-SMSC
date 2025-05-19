@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { SmppServer } from './smpp-core/smpp-server';
-import apiRouter from './api/v1/messages/send';
+//import apiRouter from './api/v1/messages/send';
 import { logger } from './utils/logger';
 import { queue } from './services/message-queue/queue';
 import { createWorkers } from './services/message-queue/workers';
@@ -16,7 +16,7 @@ app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse JSON body
 
 // Routes
-app.use('/v1/messages', apiRouter);
+//app.use('/v1/messages', apiRouter);
 
 // Start SMPP server
 const smppServer = new SmppServer();
