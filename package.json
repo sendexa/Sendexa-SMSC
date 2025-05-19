@@ -2,7 +2,7 @@
   "name": "sendexa-smsc",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/app.js",
   "scripts": {
     "lint": "eslint . --ext .ts,.js",
     "lint:fix": "eslint . --ext .ts,.js --fix",
@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "node dist/app.js",
     "prepare": "node -e \"try { require('husky').install() } catch (e) {if (e.code !== 'MODULE_NOT_FOUND') throw e}\"",
-    "test": "ts-node test/api.test.ts"
+    "test": "ts-node test/api.test.ts",
+    "postinstall": "npm run build"
   },
   "lint-staged": {
     "*.ts": "eslint --fix"

@@ -5,6 +5,11 @@ import { authenticateRequest } from '../middleware/auth';
 const router = Router();
 const messagesController = new MessagesController();
 
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // GET /v1/messages/send - Send SMS via GET
 router.get('/send', authenticateRequest, (req, res) => {
   const { from, to, content } = req.query;
