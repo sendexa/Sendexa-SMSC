@@ -1,39 +1,45 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { SmppServer } from './smpp-core/smpp-server';
 import { logger } from './utils/logger';
-import { queue } from './services/message-queue/queue';
 import { createWorkers } from './services/message-queue/workers';
-import apiRouter from './api/v1';
+import messageRoutes from './api/v1/routes/messages';
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet()); // Basic security headers
-app.use(cors()); // Enable CORS
-app.use(express.json()); // Parse JSON body
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/v1', apiRouter);
-
-// Start SMPP server
-const smppServer = new SmppServer();
-smppServer.start();
-
-// Start message queue workers
-createWorkers();
-
-// Start HTTP server
-app.listen(port, () => {
-  logger.info(`HTTP server running on port ${port}`);
+// Request logging
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`, {
+    query: req.query,
+    body: req.body,
+    ip: req.ip
+  });
+  next();
 });
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Shutting down servers...');
-  smppServer.stop();
-  await queue.close();
-  process.exit(0);
+// Routes
+app.use('/v1/messages', messageRoutes);
+
+// Error handling
+app.use((err: Error, req: express.Request, res: express.Response) => {
+  logger.error('Unhandled error', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: 'An unexpected error occurred'
+  });
+});
+
+// Start workers
+createWorkers();
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  logger.info(`Server listening on port ${PORT}`);
 });

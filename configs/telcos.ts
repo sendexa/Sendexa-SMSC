@@ -33,6 +33,8 @@ export interface TelcoNCASettings {
 }
 
 export interface TelcoConfig {
+  rate: any;
+  networkId: any;
   name: string;
   code: string;
   country: string;

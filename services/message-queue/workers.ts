@@ -1,15 +1,9 @@
 import { Worker } from 'bullmq';
 import { logger } from '../../utils/logger';
-// Update the import to match the actual export from '../../configs/system'
 import { redisConfig } from '../../configs/system';
-// Or, if it's a named export with a different name, use:
-// import { correctExportName as redisConfig } from '../../configs/system';
-import { MTNConfig } from '../../countries/ghana/mtn/config';
-import { VodafoneConfig } from '../../countries/ghana/vodafone/config';
-import { AirtelTigoConfig } from '../../countries/ghana/airteltigo/config';
-import { GloConfig } from '../../countries/ghana/glo/config';
 import { SmppClient } from '../../smpp-core/smpp-client';
 import { MessageStatus } from '../../api/v1/types/messages';
+import { TelcoRegistry } from '../../configs/telcos';
 
 interface MessageData {
   messageId: string;
@@ -30,44 +24,106 @@ interface BatchMessageData {
   clientId: string;
 }
 
-const telcoConfigs = {
-  mtn: MTNConfig,
-  vodafone: VodafoneConfig,
-  airteltigo: AirtelTigoConfig,
-  glo: GloConfig
-};
+interface RateLimiter {
+  minute: number;
+  hour: number;
+  day: number;
+  lastReset: {
+    minute: number;
+    hour: number;
+    day: number;
+  };
+  throughput: {
+    count: number;
+    lastReset: number;
+  };
+}
+
 
 const clients: Map<string, SmppClient> = new Map();
-
-// Telco routing based on phone number prefix
-const telcoRouting: Record<string, string> = {
-  '23320': 'mtn',
-  '23324': 'mtn',
-  '23354': 'mtn',
-  '23355': 'mtn',
-  '23359': 'mtn',
-  '23325': 'vodafone',
-  '23350': 'vodafone',
-  '23326': 'airteltigo',
-  '23327': 'airteltigo',
-  '23356': 'airteltigo',
-  '23357': 'airteltigo',
-  '23323': 'glo'
-};
+const rateLimiters: Map<string, RateLimiter> = new Map();
 
 function getTelcoForNumber(phoneNumber: string): string {
-  // Remove any non-digit characters
-  const cleanNumber = phoneNumber.replace(/\D/g, '');
+  return TelcoRegistry.getTelcoByNumber(phoneNumber);
+}
+
+function initializeRateLimiter(): RateLimiter {
+  // const now = Date.now();
+  const now = Date.now();
   
-  // Check each prefix
-  for (const [prefix, telco] of Object.entries(telcoRouting)) {
-    if (cleanNumber.startsWith(prefix)) {
-      return telco;
+  return {
+    minute: 0,
+    hour: 0,
+    day: 0,
+    lastReset: {
+      minute: now,
+      hour: now,
+      day: now
+    },
+    throughput: {
+      count: 0,
+      lastReset: now
     }
-  }
+  };
+}
+
+function checkRateLimits(telco: string): boolean {
+  const config = TelcoRegistry.getConfig(telco);
+  const limits = config.ncaSettings.rateLimits;
+  const now = Date.now();
   
-  // Default to MTN if no match found
-  return 'mtn';
+  // Get or initialize rate limiter
+  let limiter = rateLimiters.get(telco);
+  if (!limiter) {
+    limiter = initializeRateLimiter();
+    rateLimiters.set(telco, limiter);
+  }
+
+  // Reset counters if needed
+  if (now - limiter.lastReset.minute >= 60000) {
+    limiter.minute = 0;
+    limiter.lastReset.minute = now;
+  }
+  if (now - limiter.lastReset.hour >= 3600000) {
+    limiter.hour = 0;
+    limiter.lastReset.hour = now;
+  }
+  if (now - limiter.lastReset.day >= 86400000) {
+    limiter.day = 0;
+    limiter.lastReset.day = now;
+  }
+
+  // Check throughput (messages per second)
+  if (now - limiter.throughput.lastReset >= 1000) {
+    limiter.throughput.count = 0;
+    limiter.throughput.lastReset = now;
+  }
+
+  // Check all limits
+  if (limiter.minute >= limits.messagesPerMinute) {
+    logger.warn(`Minute rate limit exceeded for ${telco}`);
+    return false;
+  }
+  if (limiter.hour >= limits.messagesPerHour) {
+    logger.warn(`Hour rate limit exceeded for ${telco}`);
+    return false;
+  }
+  if (limiter.day >= limits.messagesPerDay) {
+    logger.warn(`Day rate limit exceeded for ${telco}`);
+    return false;
+  }
+  if (limiter.throughput.count >= config.throughput) {
+    logger.warn(`Throughput limit exceeded for ${telco}`);
+    return false;
+  }
+
+  // Update counters
+  limiter.minute++;
+  limiter.hour++;
+  limiter.day++;
+  limiter.throughput.count++;
+
+  return true;
 }
 
 export function createWorkers(): void {
@@ -80,6 +136,18 @@ export function createWorkers(): void {
       logger.info(`Processing message ${messageId} to ${to}`);
       
       const telco = getTelcoForNumber(to);
+      const config = TelcoRegistry.getConfig(telco);
+
+      // Check rate limits
+      if (!checkRateLimits(telco)) {
+        throw new Error(`Rate limit exceeded for ${telco}`);
+      }
+
+      // Check content length
+      if (content.length > config.ncaSettings.templates.maxLength) {
+        throw new Error(`Message content exceeds maximum length of ${config.ncaSettings.templates.maxLength} characters`);
+      }
+
       const client = await getOrCreateClient(telco);
       
       const result = await client.submitMessage({
@@ -88,13 +156,18 @@ export function createWorkers(): void {
         message: content,
         messageId,
         dataCoding: 0, // GSM 7-bit default alphabet
-        registeredDelivery: 1 // Request delivery receipt
+        registeredDelivery: config.registeredDelivery,
+        ...config.specificParams
       });
       
       return { 
         status: MessageStatus.SENT_TO_TELCO, 
         messageId: result.messageId,
-        telco
+        telco,
+        config: {
+          throughput: config.throughput,
+          maxConnections: config.maxConnections
+        }
       };
     } catch (error) {
       logger.error(`Message processing failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -113,26 +186,60 @@ export function createWorkers(): void {
 
       logger.info(`Processing batch ${batchId} with ${messages.length} messages`);
       
+      // Group messages by telco for better throughput
+      const messagesByTelco = messages.reduce((acc, msg) => {
+        const telco = getTelcoForNumber(msg.recipient);
+        if (!acc[telco]) acc[telco] = [];
+        acc[telco].push(msg);
+        return acc;
+      }, {} as Record<string, typeof messages>);
+
       const results = await Promise.all(
-        messages.map(async (msg) => {
-          const telco = getTelcoForNumber(msg.recipient);
+        Object.entries(messagesByTelco).map(async ([telco, telcoMessages]) => {
+          const config = TelcoRegistry.getConfig(telco);
+
+          // Check rate limits for the batch
+          if (!checkRateLimits(telco)) {
+            throw new Error(`Rate limit exceeded for ${telco}`);
+          }
+
           const client = await getOrCreateClient(telco);
           
-          return client.submitMessage({
-            source: from,
-            destination: msg.recipient,
-            message: msg.content,
-            messageId: msg.messageId,
-            dataCoding: 0,
-            registeredDelivery: 1
-          });
+          // Process messages in chunks based on throughput
+          const chunkSize = Math.min(config.throughput, telcoMessages.length);
+          const chunks = [];
+          
+          for (let i = 0; i < telcoMessages.length; i += chunkSize) {
+            const chunk = telcoMessages.slice(i, i + chunkSize);
+            const chunkResults = await Promise.all(
+              chunk.map(msg => 
+                client.submitMessage({
+                  source: from,
+                  destination: msg.recipient,
+                  message: msg.content,
+                  messageId: msg.messageId,
+                  dataCoding: 0,
+                  registeredDelivery: config.registeredDelivery,
+                  ...config.specificParams
+                })
+              )
+            );
+            chunks.push(chunkResults);
+            
+            // Add a small delay between chunks to respect throughput
+            if (i + chunkSize < telcoMessages.length) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
+          return chunks.flat();
         })
       );
       
       return {
         status: MessageStatus.SENT_TO_TELCO,
         batchId,
-        results: results.map(r => ({
+        results: results.flat().map(r => ({
           messageId: r.messageId,
           status: r.status
         }))
@@ -186,11 +293,7 @@ async function getOrCreateClient(telco: string): Promise<SmppClient> {
     clients.delete(telco);
   }
 
-  const config = telcoConfigs[telco as keyof typeof telcoConfigs];
-  if (!config) {
-    throw new Error(`No configuration found for telco: ${telco}`);
-  }
-
+  const config = TelcoRegistry.getConfig(telco);
   const client = new SmppClient({
     host: config.host,
     port: config.port,

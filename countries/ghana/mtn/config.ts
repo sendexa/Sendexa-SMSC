@@ -42,8 +42,8 @@ export const MTNConfig: TelcoConfig = {
   interfaceVersion: 0x34,
   sourceTON: 5, // Alphanumeric
   sourceNPI: 0, // Unknown
-  destTON: 1,   // International
-  destNPI: 1,   // ISDN/E.164
+  destTON: 1, // International
+  destNPI: 1, // ISDN/E.164
   registeredDelivery: 1, // Request delivery receipt
   throughput: 100, // Messages per second
   maxConnections: 5,
@@ -59,5 +59,7 @@ export const MTNConfig: TelcoConfig = {
     smDefaultMsgId: 0,
     // MTN requires specific parameters for premium SMS
     destAddrSubunit: 0
-  }
+  },
+  rate: undefined,
+  networkId: undefined
 };

@@ -1,34 +1,49 @@
-export interface SendSMSRequest {
-  From: string;
-  To: string;
-  Content: string;
+export enum MessageStatus {
+  SUBMITTED = 0,
+  QUEUED = 1,
+  SENT_TO_TELCO = 2,
+  DELIVERED = 3,
+  FAILED = 4,
+  INVALID_NUMBER = 5
 }
 
-export interface BatchSMSRequest {
-  From: string;
-  Recipients: string[];
-  Content: string;
+export interface SendSmsRequest {
+  from: string;
+  to: string;
+  content: string;
+  clientId: string;
+  clientSecret: string;
 }
 
-export interface PersonalizedBatchSMSRequest {
-  From: string;
-  personalizedRecipients: {
-    To: string;
-    Content: string;
-  }[];
-}
-
-export interface MessageResponse {
+export interface SendSmsResponse {
   rate: number;
   messageId: string;
-  status: number;
+  status: MessageStatus;
   statusDescription: string;
   networkId: string;
 }
 
-export interface BatchMessageResponse {
+export interface BatchSmsRequest {
+  from: string;
+  recipients: string[];
+  content: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+export interface PersonalizedBatchSmsRequest {
+  from: string;
+  personalizedRecipients: {
+    to: string;
+    content: string;
+  }[];
+  clientId: string;
+  clientSecret: string;
+}
+
+export interface BatchSmsResponse {
   batchId: string;
-  status: number;
+  status: MessageStatus;
   data: {
     recipient: string;
     content: string;
@@ -39,7 +54,7 @@ export interface BatchMessageResponse {
 export interface MessageStatusResponse {
   rate: number;
   messageId: string;
-  status: string;
+  status: MessageStatus;
   updateTime: string;
   time: string;
   to: string;
@@ -47,11 +62,11 @@ export interface MessageStatusResponse {
   content: string;
 }
 
-export enum MessageStatus {
-  REQUEST_SUBMITTED = 0,
-  QUEUED = 1,
-  SENT_TO_TELCO = 2,
-  DELIVERED = 3,
-  FAILED = 4,
-  INVALID_NUMBER = 5
+export interface DeliveryReport {
+  messageId: string;
+  status: MessageStatus;
+  errorCode?: string;
+  errorDescription?: string;
+  timestamp: string;
+  telco: string;
 } 

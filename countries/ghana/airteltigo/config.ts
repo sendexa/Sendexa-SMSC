@@ -42,8 +42,8 @@ export const AirtelTigoConfig: TelcoConfig = {
   interfaceVersion: 0x34,
   sourceTON: 5, // Alphanumeric
   sourceNPI: 0, // Unknown
-  destTON: 1,   // International
-  destNPI: 1,   // ISDN/E.164
+  destTON: 1, // International
+  destNPI: 1, // ISDN/E.164
   registeredDelivery: 1, // Request delivery receipt
   throughput: 70, // Messages per second
   maxConnections: 3,
@@ -58,9 +58,6 @@ export const AirtelTigoConfig: TelcoConfig = {
     replaceIfPresentFlag: 0,
     smDefaultMsgId: 0
   },
-  // AirtelTigo has specific DLR requirements
-  // dlrSettings: {
-  //   dlrMask: 31,
-  //   dlrUrl: 'https://your-server.com/airteltigo/dlr'
-  // }
+  rate: undefined,
+  networkId: undefined
 };
