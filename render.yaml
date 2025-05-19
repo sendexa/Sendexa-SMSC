@@ -3,7 +3,7 @@ services:
     name: sendexa-smpp
     env: node
     buildCommand: npm install
-    startCommand: node dist/app.js
+    startCommand: npm run prod
     envVars:
       - key: NODE_ENV
         value: production
@@ -19,4 +19,11 @@ services:
         sync: false
       - key: SMPP_PASSWORD
         sync: false
-    healthCheckPath: /v1/messages/health 
+    healthCheckPath: /v1/messages/health
+    autoDeploy: true
+    plan: free
+    numInstances: 1
+    disk:
+      name: tmp
+      mountPath: /tmp
+      sizeGB: 1 

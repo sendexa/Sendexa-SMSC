@@ -11,7 +11,8 @@
     "start": "node dist/app.js",
     "prepare": "node -e \"try { require('husky').install() } catch (e) {if (e.code !== 'MODULE_NOT_FOUND') throw e}\"",
     "test": "ts-node test/api.test.ts",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build",
+    "prod": "node dist/app.js"
   },
   "lint-staged": {
     "*.ts": "eslint --fix"
