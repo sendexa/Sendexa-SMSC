@@ -9,15 +9,25 @@ import { VodafoneConfig } from '../../countries/ghana/vodafone/config';
 import { AirtelTigoConfig } from '../../countries/ghana/airteltigo/config';
 import { GloConfig } from '../../countries/ghana/glo/config';
 import { SmppClient } from '../../smpp-core/smpp-client';
+import { MessageStatus } from '../../api/v1/types/messages';
 
 interface MessageData {
-  telco: string;
-  source: string;
-  destination: string;
-  message: string;
   messageId: string;
-  dataCoding: number;
-  registeredDelivery: number;
+  from: string;
+  to: string;
+  content: string;
+  clientId: string;
+}
+
+interface BatchMessageData {
+  batchId: string;
+  from: string;
+  messages: {
+    recipient: string;
+    content: string;
+    messageId: string;
+  }[];
+  clientId: string;
 }
 
 const telcoConfigs = {
@@ -29,34 +39,65 @@ const telcoConfigs = {
 
 const clients: Map<string, SmppClient> = new Map();
 
+// Telco routing based on phone number prefix
+const telcoRouting: Record<string, string> = {
+  '23320': 'mtn',
+  '23324': 'mtn',
+  '23354': 'mtn',
+  '23355': 'mtn',
+  '23359': 'mtn',
+  '23325': 'vodafone',
+  '23350': 'vodafone',
+  '23326': 'airteltigo',
+  '23327': 'airteltigo',
+  '23356': 'airteltigo',
+  '23357': 'airteltigo',
+  '23323': 'glo'
+};
+
+function getTelcoForNumber(phoneNumber: string): string {
+  // Remove any non-digit characters
+  const cleanNumber = phoneNumber.replace(/\D/g, '');
+  
+  // Check each prefix
+  for (const [prefix, telco] of Object.entries(telcoRouting)) {
+    if (cleanNumber.startsWith(prefix)) {
+      return telco;
+    }
+  }
+  
+  // Default to MTN if no match found
+  return 'mtn';
+}
+
 export function createWorkers(): void {
-  const worker = new Worker('sms-messages', async job => {
+  // Worker for single messages
+  const singleMessageWorker = new Worker('send-sms', async job => {
     try {
       const data = job.data as MessageData;
-      const { telco, source, destination, message, messageId, dataCoding, registeredDelivery } = data;
+      const { messageId, from, to, content } = data;
 
-      logger.info(`Processing message ${messageId} via ${telco}`);
+      logger.info(`Processing message ${messageId} to ${to}`);
       
-      // Get or create SMPP client for the telco
+      const telco = getTelcoForNumber(to);
       const client = await getOrCreateClient(telco);
       
-      // Submit message to telco's SMSC
       const result = await client.submitMessage({
-        source,
-        destination,
-        message,
+        source: from,
+        destination: to,
+        message: content,
         messageId,
-        dataCoding,
-        registeredDelivery
+        dataCoding: 0, // GSM 7-bit default alphabet
+        registeredDelivery: 1 // Request delivery receipt
       });
       
-      return { status: 'delivered', messageId: result.messageId };
+      return { 
+        status: MessageStatus.SENT_TO_TELCO, 
+        messageId: result.messageId,
+        telco
+      };
     } catch (error) {
-      let errorMsg = 'Unknown error';
-      if (typeof error === 'object' && error && 'message' in error) {
-        errorMsg = (error as { message: string }).message;
-      }
-      logger.error(`Message processing failed: ${errorMsg}`);
+      logger.error(`Message processing failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }, {
@@ -64,12 +105,63 @@ export function createWorkers(): void {
     concurrency: 10
   });
 
-  worker.on('completed', job => {
+  // Worker for batch messages
+  const batchMessageWorker = new Worker('send-batch-sms', async job => {
+    try {
+      const data = job.data as BatchMessageData;
+      const { batchId, from, messages } = data;
+
+      logger.info(`Processing batch ${batchId} with ${messages.length} messages`);
+      
+      const results = await Promise.all(
+        messages.map(async (msg) => {
+          const telco = getTelcoForNumber(msg.recipient);
+          const client = await getOrCreateClient(telco);
+          
+          return client.submitMessage({
+            source: from,
+            destination: msg.recipient,
+            message: msg.content,
+            messageId: msg.messageId,
+            dataCoding: 0,
+            registeredDelivery: 1
+          });
+        })
+      );
+      
+      return {
+        status: MessageStatus.SENT_TO_TELCO,
+        batchId,
+        results: results.map(r => ({
+          messageId: r.messageId,
+          status: r.status
+        }))
+      };
+    } catch (error) {
+      logger.error(`Batch processing failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }, {
+    connection: redisConfig,
+    concurrency: 5
+  });
+
+  // Event handlers for single message worker
+  singleMessageWorker.on('completed', job => {
     logger.info(`Message ${job.id} completed`);
   });
 
-  worker.on('failed', (job, err) => {
+  singleMessageWorker.on('failed', (job, err) => {
     logger.error(`Message ${job?.id} failed: ${err.message}`);
+  });
+
+  // Event handlers for batch message worker
+  batchMessageWorker.on('completed', job => {
+    logger.info(`Batch ${job.id} completed`);
+  });
+
+  batchMessageWorker.on('failed', (job, err) => {
+    logger.error(`Batch ${job?.id} failed: ${err.message}`);
   });
 
   // Cleanup on process exit

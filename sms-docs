@@ -1,0 +1,244 @@
+# Sendexa SMS API
+
+The Sendexa SMS API enables developers to integrate reliable messaging features into any application. This documentation outlines how to send simple, bulk, and personalized messages, and check delivery status using our RESTful endpoints.
+
+---
+
+## 🔐 Authentication
+
+Use your `clientId` and `clientSecret` to authenticate GET requests. For POST requests, use **Basic Auth** with your encoded credentials:
+
+```
+
+Authorization: Basic base64(clientId\:clientSecret)
+
+```
+
+---
+
+## 📤 1. Send SMS (GET)
+
+Send a single message using a GET request.
+
+### **Endpoint**
+```
+
+GET /v1/messages/send
+
+```
+
+### **Query Parameters**
+
+| Parameter     | Type   | Required | Description                        |
+|---------------|--------|----------|------------------------------------|
+| `clientid`    | string | Yes      | Your unique client ID              |
+| `clientsecret`| string | Yes      | Your unique client secret          |
+| `from`        | string | Yes      | Sender ID (max 11 characters)      |
+| `to`          | string | Yes      | Recipient’s phone number (MSISDN) |
+| `content`     | string | Yes      | Message content                    |
+
+### **Sample Request**
+```
+
+GET /v1/messages/send?clientid=abc123\&clientsecret=xyz456\&from=Sendexa\&to=233501234567\&content=Hello+from+Sendexa
+
+````
+
+### **Sample Response**
+```json
+{
+  "rate": 0.030,
+  "messageId": "uuid-1234",
+  "status": 0,
+  "statusDescription": "Request submitted successfully",
+  "networkId": "62001"
+}
+````
+
+---
+
+## 📤 2. Send SMS (POST)
+
+Send a single SMS using a POST request.
+
+### **Endpoint**
+
+```
+POST /v1/messages/send
+```
+
+### **Headers**
+
+```
+Content-Type: application/json
+Authorization: Basic base64(clientId:clientSecret)
+```
+
+### **Request Body**
+
+```json
+{
+  "From": "Sendexa",
+  "To": "233501234567",
+  "Content": "Your order is confirmed."
+}
+```
+
+### **Sample Response**
+
+```json
+{
+  "rate": 0.025,
+  "messageId": "uuid-1234",
+  "status": 0,
+  "statusDescription": "Request submitted successfully",
+  "networkId": "62002"
+}
+```
+
+---
+
+## 📦 3. Batch SMS (Simple)
+
+Send the same message to multiple recipients.
+
+### **Endpoint**
+
+```
+POST /v1/messages/batch/simple/send
+```
+
+### **Request Body**
+
+```json
+{
+  "From": "Sendexa",
+  "Recipients": [
+    "233501234567",
+    "233509876543"
+  ],
+  "Content": "Sale ends tonight!"
+}
+```
+
+### **Sample Response**
+
+```json
+{
+  "batchId": "batch-uuid",
+  "status": 0,
+  "data": [
+    {
+      "recipient": "233501234567",
+      "content": "Sale ends tonight!",
+      "messageId": "uuid-1"
+    },
+    {
+      "recipient": "233509876543",
+      "content": "Sale ends tonight!",
+      "messageId": "uuid-2"
+    }
+  ]
+}
+```
+
+---
+
+## 🧠 4. Batch SMS (Personalized)
+
+Send customized messages to each recipient.
+
+### **Endpoint**
+
+```
+POST /v1/messages/batch/personalized/send
+```
+
+### **Request Body**
+
+```json
+{
+  "From": "Sendexa",
+  "personalizedRecipients": [
+    {
+      "To": "233501234567",
+      "Content": "Hi Joe, your order is ready."
+    },
+    {
+      "To": "233509876543",
+      "Content": "Hi Ama, your package has shipped."
+    }
+  ]
+}
+```
+
+### **Sample Response**
+
+```json
+{
+  "batchId": "batch-uuid",
+  "status": 0,
+  "data": [
+    {
+      "recipient": "233501234567",
+      "content": "Hi Joe, your order is ready.",
+      "messageId": "uuid-1"
+    },
+    {
+      "recipient": "233509876543",
+      "content": "Hi Ama, your package has shipped.",
+      "messageId": "uuid-2"
+    }
+  ]
+}
+```
+
+---
+
+## 📊 5. Message Status Check
+
+Check delivery status of a specific message using `messageId`.
+
+### **Endpoint**
+
+```
+GET /v1/messages/{messageId}
+```
+
+### **Sample Response**
+
+```json
+{
+  "rate": 0.030,
+  "messageId": "uuid-1234",
+  "status": "Delivered",
+  "updateTime": "2025-05-19T10:45:00Z",
+  "time": "2025-05-19T10:42:00Z",
+  "to": "233501234567",
+  "from": "Sendexa",
+  "content": "Hello from Sendexa"
+}
+```
+
+---
+
+## 🚦 Status Codes
+
+| Code | Description       |
+| ---- | ----------------- |
+| 0    | Request submitted |
+| 1    | Queued            |
+| 2    | Sent to Telco     |
+| 3    | Delivered         |
+| 4    | Failed            |
+| 5    | Invalid Number    |
+
+---
+
+## 📘 Notes
+
+* All MSISDNs must be in international format (e.g., `233xxxxxxxxx`)
+* Sender ID max characters = 11
+* You can track delivery using messageId returned after sending
+* More endpoints coming soon: OTP, Voice, and Email
+

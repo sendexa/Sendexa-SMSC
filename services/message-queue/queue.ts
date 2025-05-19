@@ -10,6 +10,6 @@ export const queue = new Queue('sms-messages', {
       delay: 1000
     }
   }
-});
+}); 
 
 // Worker setup would be in workers.ts

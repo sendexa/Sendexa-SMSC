@@ -111,6 +111,9 @@ export const systemConfig: SystemConfig = {
   }
 };
 
+// Export Redis configuration for BullMQ
+export const redisConfig = systemConfig.redis;
+
 // Helper function to get environment-specific configuration
 export function getEnvConfig(): Partial<SystemConfig> {
   const env = process.env.NODE_ENV || 'development';
